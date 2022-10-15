@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>登录</title>
+    <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
+    <!-- 新 Bootstrap 核心 CSS 文件 -->
+    <link href="/css/login.css" rel="stylesheet">
+    <link href="/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+</head>
+
+<body class="login">
+    <div class="container">
+        <div class="row justify-content-center text-center">
+            <div class="col-md-6">
+                <main class="form-signing col-md-8 offset-md-2" id="main">
+                    <h1 class="h2 mb-3 fw-normal">登 录</h1>
+                    <hr>
+                    <div class="form-floating">
+                        <input type="email" class="form-control" id="floatingInput" placeholder="name@example.com"
+                            v-model="email">
+                        <label for="floatingInput">Email address</label>
+                    </div>
+                    <br>
+                    <div class="form-floating">
+                        <input type="password" class="form-control" id="floatingPassword" placeholder="Password"
+                            v-model="password">
+                        <label for="floatingPassword">Password</label>
+                    </div>
+                    <br>
+                    <button class="w-100 btn btn-lg btn-primary" @click="login" :disabled="loginDisable">Sign
+                        in</button>
+                    <br><br>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <button class="w-100 btn btn-md btn-danger" type="submit">忘记密码</button>
+                        </div>
+                        <div class="col-md-4 offset-md-4">
+                            <a href="/register.html" class="w-100 btn btn-md btn-warning" type="submit">立刻注册</a>
+                        </div>
+                    </div>
+                </main>
+            </div>
+        </div>
+    </div>
+
+    <!-- jQuery文件。务必在bootstrap.min.js 之前引入 -->
+    <script src="/js/jquery.min.js"></script>
+
+    <!-- 最新的 Bootstrap 核心 JavaScript 文件 -->
+    <script src="/bootstrap/js/bootstrap.min.js"></script>
+    <script src="/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/axios.min.js"></script>
+    <script src="/js/vue.min.js"></script>
+
+    <script>
+        new Vue({
+            el: '#main',
+            data: {
+                email: '',
+                password: '',
+                loginDisable: false
+            },
+            methods: {
+                login() {
+                    let that = this;
+                    that.loginDisable = true;
+                    setTimeout(function () { that.loginDisable = false; }, 8000);
+                    let regEmail = /^([a-zA-Z]|[0-9])(\w|\-)+@[a-zA-Z0-9]+\.([a-zA-Z]{2,4})$/;
+                    let regPasswd = /^([\da-zA-Z]{6,20})$/
+                    if (!regEmail.test(that.email)) {
+                        alert("邮箱格式错误");
+                        return
+                    }
+                    if (!regPasswd.test(that.password)) {
+                        alert("密码应为大小写英文字符或数字组成的长度为6-20");
+                        return
+                    }
+                    let data = {
+                        email: that.email,
+                        password: that.password
+                    }
+                    axios.post('/account/login', data)
+                        .then(function (response) {
+                            // 处理成功情况
+                            console.log(response.data.data.account);
+                            localStorage.setItem("account", JSON.stringify(response.data.data.account));
+                            window.location.href = window.location.protocol + "//" + window.location.host;
+                        })
+                        .catch(function (error) {
+                            // 处理错误情况
+                            console.log(error.response.data.msg);
+                            alert("登录失败")
+                        })
+                        .then(function () {
+                            // 总是会执行
+                        });
+                }
+            }
+        })
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,482 @@
+html,
+body {
+    height: 100%;
+}
+
+.chat {
+    display: flex;
+    min-width: 1000px;
+    align-items: center;
+    background-image: linear-gradient(45deg, #ff9a9e 0%, #fad0c4 99%, #fad0c4 100%);
+    /* background-image: linear-gradient(to top, #e6b980 0%, #eacda3 100%);
+    background-image: linear-gradient(-225deg, #5D9FFF 0%, #B8DCFF 48%, #6BBBFF 100%);
+    background-image: linear-gradient(120deg, #84fab0 0%, #8fd3f4 100%); */
+}
+
+.chat .unreadPoint{
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: crimson;
+}
+
+.chat #changeBackgroundColor {
+    height: 30px;
+    width: 30px;
+    border-radius: 50%;
+    margin: 8px;
+    background-image: linear-gradient(120deg, #84fab0 0%, #8fd3f4 100%);
+}
+
+.chat .avatarBox {
+    width: 100%;
+    height: 0;
+    padding-bottom: 100%;
+    position: relative;
+}
+
+.chat .avatarBox>img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    position: absolute;
+}
+
+.chat .container {
+    float: none;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.chat .container>.row {
+    height: 620px;
+
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.4);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    box-shadow: inset 0 0 6px rgba(255, 255, 255, 0.4);
+}
+
+.chat #personalInfo {
+    width: 50px;
+    margin: 12px;
+    cursor: pointer;
+}
+
+.chat #header {
+    height: 60px;
+    background-image: linear-gradient(135deg, #f5f7fa 0%, #d9dbdf 100%);
+    border-top-left-radius: 25px;
+    border-top-right-radius: 25px;
+}
+
+.chat #header>div {
+    line-height: 60px;
+}
+
+.chat #header #chevron {
+    text-align: right;
+}
+
+.chat #mainBody {
+    border-bottom-left-radius: 15px;
+    border-bottom-right-radius: 15px;
+}
+
+
+.chat #searchBox {
+    /*height: 60px;*/
+    margin-top: 13px;
+}
+
+.chat #searchBox button {
+    height: 40px;
+    width: 70%;
+    line-height: 40px;
+    border: transparent;
+    border-radius: 20px;
+    background-color: white;
+    text-align: center;
+    margin: auto;
+}
+
+.chat #toolBox {
+    /*height: 60px;*/
+    /*border: solid;*/
+    color: black;
+    text-align: center;
+    line-height: 60px
+}
+
+.chat .scrollarea {
+    height: 615px;
+    overflow-y: auto;
+    border-bottom-left-radius: 15px;
+}
+
+
+
+
+.chat #messageList {
+    border-right: solid;
+    padding: 0px;
+}
+
+.chat #messageList .avatar {
+    float: left;
+    width: 60px;
+    margin-right: 6px;
+}
+
+.chat #messageList .scrollarea>.list-group-item {
+    height: 80px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    background-color: transparent;
+}
+
+.chat .sidebarRight {
+    border: solid;
+    border-bottom-right-radius: 10px;
+    padding: 0px;
+}
+
+.chat #friendList .avatar {
+    float: left;
+    width: 40px;
+    margin-right: 6px;
+}
+
+.chat #friendList .avatar img{
+    border-radius: 20%;
+}
+
+
+.chat #friendList .scrollarea>.list-group-item {
+    height: 50px;
+    padding-top: 5px;
+    padding-bottom: 5px;
+    background-color: transparent;
+}
+
+
+.chat #friendList .scrollarea {
+    border-bottom-left-radius: 0;
+}
+
+.chat #friendSearchBox-group {
+    margin: 0;
+    padding: 10px;
+}
+
+.chat #friendSearchBox-group label {
+    color: gray;
+}
+
+.chat #friendSearchBox-group input {
+    width: calc(100% - 22px);
+    background-color: transparent;
+    border: transparent;
+}
+
+.chat #friendSearchBox-group input:focus {
+    box-shadow: none;
+    outline: none;
+}
+
+
+.chat #historySearch .avatar {
+    float: left;
+    width: 40px;
+    margin-right: 6px;
+    margin-left: -10px;
+}
+
+.chat #historySearch .scrollarea>.list-group-item {
+    height: 50px;
+    padding-top: 5px;
+    padding-bottom: 5px;
+    background-color: transparent;
+}
+
+
+.chat #historySearch .scrollarea {
+    border-bottom-left-radius: 0;
+}
+
+.chat .messageList-top {
+    height: 50%;
+}
+
+.chat .messageList-top div {
+    float: right;
+}
+
+.chat .messageList-bottom {
+    height: 50%;
+}
+
+.chat .messageList-bottom span {
+    color: #9b9b9b;
+    width: calc(100% - 120px);
+    display: inline-block
+}
+
+.chat .messageList-bottom div {
+    min-width: 20px;
+    height: 20px;
+    line-height: 14px;
+    font-size: 10px;
+    color: #fff;
+    text-align: center;
+    border-radius: 50%;
+    float: right;
+}
+
+
+/* 设置滚动条的样式 */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+/* 滚动槽 */
+::-webkit-scrollbar-track {
+    border-radius: 6px;
+}
+
+/* 滚动条滑块 */
+::-webkit-scrollbar-thumb {
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.chat #messageBox {
+    height: 450px;
+    border: solid;
+}
+
+.chat #sentBox {
+    height: 170px;
+    border: solid;
+    border-top: transparent;
+}
+
+.chat #sentBox>span {
+    height: 30px;
+}
+
+.chat #sentBox .position-absolute {
+    width: 150px;
+    height: 100px;
+    margin-left: 5px;
+    margin-bottom: 30px;
+    border: solid;
+    border-radius: 10px;
+    font-size: x-large;
+    background: floralwhite;
+}
+
+.chat #sentBox .emjio{
+    cursor: pointer;
+}
+
+.chat #sentBox>span i {
+    color: black;
+    font-size: 20px;
+    border: 0;
+    padding: 0 13px;
+}
+
+.chat #sentBox>textarea {
+    height: 84px;
+    font-size: large;
+    background-color: transparent;
+    border: transparent;
+    resize: none;
+}
+
+.chat #sentBox>textarea:focus {
+    box-shadow: none;
+}
+
+.chat #sentBox>button {
+    float: right;
+    margin: 9px
+}
+
+.chat #messageBox {
+    overflow-y: auto;
+}
+
+.chat .message {
+    margin-top: 10px;
+}
+
+.chat .message .avatar {
+    width: 50px;
+    margin-left: 10px;
+    margin-right: 10px;
+}
+
+.chat .message .messageContent {
+    max-width: 60%
+}
+
+.chat .message .messageBubble {
+    display: inline-block;
+}
+
+.chat .message-other {
+    display: flex;
+    justify-content: flex-start;
+}
+
+.chat .message .message-other .messageBubble {
+    margin-top: 6px;
+    border-radius: 0 10px 10px 10px;
+}
+
+.chat .message-self {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.chat .message-self .messageContent .messageBubble {
+    text-align: left;
+    border-radius: 10px 0 10px 10px;
+    float: right;
+}
+
+.chat #groupBox {
+    padding: 0;
+    border: solid;
+    visibility: visible;
+    border-bottom-right-radius: 10px;
+}
+
+.chat #groupBox #btnGroup {
+    border: transparent;
+    height: 38px;
+}
+
+.chat #groupBox #btnGroup>.bi-chevron-double-right {
+    float: right;
+}
+
+.chat #groupBox #announceBox {
+    height: 130px;
+    border-top: solid;
+}
+
+.chat #groupBox #announceBox #announceHeader {
+    border: transparent;
+    height: 30px;
+    color: black;
+}
+
+.chat #groupBox #announceHeader span {
+    padding: 0 6px;
+}
+
+.chat #groupBox #announceHeader .btn {
+    padding: 0 6px;
+    float: right;
+}
+
+.chat #groupBox #announceBody {
+    height: 100px;
+    color: gray;
+    margin: 0 8px;
+    white-space: nowrap;
+}
+
+.chat #groupBox>span>i {
+    font-size: 15px;
+    padding: 0 5px;
+}
+
+.chat .userList {
+    height: 445px;
+    border-top: solid;
+    overflow-y: auto;
+}
+
+.chat .userList .list-group-item .avatar {
+    width: 26px;
+    margin-right: 4px;
+    float: left;
+}
+
+.chat .userList .list-group-item i {
+    float: right;
+}
+
+.chat .userList #userSearchBox-group {
+    margin: 0;
+    padding: 6px;
+}
+
+.chat .userList #userSearchBox-group label {
+    color: gray;
+}
+
+.chat .userList #userSearchBox-group input {
+    width: calc(100% - 22px);
+    background-color: transparent;
+    border: transparent;
+}
+
+.chat .userList .list-group-item {
+    padding: 6px;
+    background-color: transparent;
+}
+
+.chat .userList .list-group-item .username {
+    color: gray;
+}
+
+.chat input:focus {
+    box-shadow: none;
+}
+
+.chat #userSearch:focus-visible {
+    box-shadow: none;
+    outline: none;
+}
+
+.chat #userSearchOffcanvas .offcanvas-body .input-group span {
+    height: 40px;
+    border-radius: 20px 0 0 20px;
+}
+
+.chat #userSearchOffcanvas .offcanvas-body .input-group input {
+    height: 40px;
+    border-radius: 0 20px 20px 0;
+}
+
+.chat #userSearchOffcanvas .offcanvas-body .list-group {
+    border-radius: 20px;
+}
+
+.chat #userSearchOffcanvas .offcanvas-body .avatar {
+    float: left;
+    width: 70px;
+    margin-right: 15px;
+}
+
+.chat #userSearchOffcanvas .offcanvas-body .list-group .text-truncate {
+    max-width: 240px;
+}
+
+.chat #userSearchOffcanvas .offcanvas-body .list-group a{
+    cursor: pointer;
+}
+
+.chat #toastmessageBox .link-primary{
+    cursor: hand;
+}
+
+.chat #toastmessageBox .buttonGroup{
+    margin-left: 10px;
+}

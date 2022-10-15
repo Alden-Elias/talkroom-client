@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>聊天室</title>
+    <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
+    <!-- 新 Bootstrap 核心 CSS 文件 -->
+    <link href="/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/bootstrap/css/fileinput.min.css" rel="stylesheet">
+    <!--datepicker-->
+    <link rel="stylesheet" href="/datepicker/css/bootstrap-datepicker.min.css">
+    <link rel="stylesheet" href="/datepicker/css/bootstrap-datepicker3.min.css">
+
+    <link href="/css/chat.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.9.0/font/bootstrap-icons.css">
+
+    <!-- jQuery文件。务必在bootstrap.min.js 之前引入 -->
+    <script src="/js/jquery.min.js"></script>
+    <!-- 最新的 Bootstrap 核心 JavaScript 文件 -->
+    <!-- <script src="/bootstrap/js/bootstrap.min.js"></script> -->
+    <script src="/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script src="/bootstrap/js/fileinput.min.js"></script>
+    <script src="/bootstrap/js/fileinput-locales-zh.js"></script>
+    <!--datepicker-->
+    <script src="/datepicker/js/bootstrap-datepicker.js"></script>
+    <script src="/datepicker/locales/bootstrap-datepicker.zh-CN.min.js"></script>
+
+    <script src="/js/axios.min.js"></script>
+    <script src="/js/vue.min.js"></script>
+</head>
+
+<body class="chat">
+    <script type="text/javascript">
+        let ws;
+        let messageMap = new Map();
+        let addFriendRequest = [];
+        let globalVar = {messageTo: -1};
+        const eventId = {
+            //get event id
+            addFriend: 1,
+            cleanUnreadCount: 2,
+
+            //sent event id
+            readMessage: 1,
+        }
+
+        $(function WebSocketConn() {
+            if ("WebSocket" in window) {
+                // 打开一个 web socket
+                ws = new WebSocket((window.location.protocol == "https:" ? "wss" : "ws") + "://" + window.location.host + "/websocket/message");
+
+                ws.onopen = function () {
+                    // Web Socket 已连接上，使用 send() 方法发送数据
+                    // alert("连接成功")
+                };
+
+                ws.onmessage = function (evt) {
+                    let res = JSON.parse(evt.data);
+
+                    if (res.from != 0) {
+                        messageMap.get(Number(res.from)).messages.push({ "from": res.from, "time": (new Date()).valueOf(), "msg": res.message });
+                        if(globalVar.messageTo != Number(res.from)) {
+                            messageMap.get(Number(res.from)).unreadCount++;
+                        }else{
+                            let req = {
+                                "to": globalVar.messageTo,
+                                "eventId": eventId.readMessage,
+                                "message": null,
+                            }
+                            ws.send(JSON.stringify(req));
+                        }
+                    } else {
+                        let systemMsg = JSON.parse(res.message);
+
+                        switch(systemMsg.eventId){
+                            case eventId.addFriend:
+                                const addFriendReq  = systemMsg.json;
+                                addFriendRequest.push({ "from": res.from, "time": (new Date()).valueOf(), "token": addFriendReq.token, "uname": addFriendReq.uname, "uid": addFriendReq.uid });
+                                console.log(addFriendRequest);
+                                break;
+                            case eventId.cleanUnreadCount: 
+                                messageMap.get(systemMsg.json.uid).unreadCount = 0;
+                                break;
+                        }
+                    }
+                };
+
+                ws.onclose = function () {
+                    // 关闭 websocket
+                    // alert("连接已关闭...");
+                    window.location.href = window.location.protocol + "//" + window.location.host + "/login.html";
+                };
+            }
+            else {
+                // 浏览器不支持 WebSocket
+                alert("您的浏览器不支持 WebSocket!");
+            }
+        });
+
+    </script>
+
+    <div class="container" id="main">
+        <button id="changeBackgroundColor" class="btn position-absolute top-0 start-0" @click="changeBackgroundColor"
+            title="切换背景颜色">
+        </button>
+
+        <!-- 用户信息 -->
+        <div id="personalInfo" class="position-absolute top-0 end-0" data-bs-toggle="modal"
+            data-bs-target="#changePersonalInfo">
+            <div class="avatarBox" title="修改个人信息">
+                <img :src=account.avatar alt="404" data-bs-toggle="tooltip">
+            </div>
+        </div>
+
+        <!--头部-->
+        <div class="row" id="header">
+            <!--工具栏-->
+            <div class="col-md-3" id="toolBox">
+                <i class="bi bi-chat-left-dots-fill btn" @click="showMessageList"></i>
+            </div>
+
+            <!--搜素框-->
+            <div id="searchBox" class="col-md-4 offset-md-1">
+                <div class="input-group text-center">
+                    <button data-bs-toggle="offcanvas" data-bs-target="#userSearchOffcanvas"
+                        aria-controls="userSearchOffcanvas">
+                        <i class="bi bi-search"></i> Search
+                    </button>
+                </div>
+            </div>
+
+
+            <!--展示-->
+            <div class="col-md-2 offset-md-2" id="chevron" v-if="true">
+                <i :class="['bi', 'btn', showSidebarRight>0?'bi-chevron-double-right':'bi-chevron-double-left' ]"
+                    @click="showGroupBox"></i>
+            </div>
+        </div>
+
+        <!--主体-->
+        <div class="row" id="mainBody">
+            <!--消息列表-->
+            <div class="col-md-3" id="messageList">
+                <div class="list-group scrollarea">
+                    <div v-for="user in users" @click="message_to(user.id)"
+                        :class="['list-group-item', user.id==globalVar.messageTo?'bg-light bg-opacity-50':'']" :title="user.id">
+
+                        <div class="avatar">
+                            <div class="avatarBox">
+                                <img :src=user.avatar alt="404">
+                            </div>
+                        </div>
+
+                        <div class="messageList-top">
+                            <strong>{{user.name}}<span class="badge" style="color: black"><i
+                                        class="bi bi-person-fill"></i></span></strong>
+                            <div>{{messageMap.get(user.id).messages.length > 0 ?
+                                dateFormat(messageMap.get(user.id).messages.at(-1).time, 1) : ''}}</div>
+
+                        </div>
+                        <div class="messageList-bottom">
+                            <span class="text-truncate">{{messageMap.get(user.id).messages.length > 0 ?
+                                messageMap.get(user.id).messages.at(-1).msg : ''}}</span>
+                            <div class="badge rounded-pill bg-secondary"v-show="messageMap.get(user.id).unreadCount > 0 && 
+                                (messageMap.get(user.id).messages.length > 0 && messageMap.get(user.id).messages.slice(-1)[0].from != account.id)">
+                                {{messageMap.get(user.id).unreadCount &lt; 10 ? messageMap.get(user.id).unreadCount
+                                    : '9+' }} 
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!--消息框主体-->
+            <div :class="[showSidebarRight>0 ? 'col-md-7' : 'col-md-9']">
+                <!--消息框-->
+                <div id="messageBox">
+                    <div class="message" v-for="(msg, idx) in curmessageList.messages">
+                        <div :class="msg.from==account.id ? 'message-self' : 'message-other'">
+                            <div class="avatar" v-if="msg.from!=account.id">
+                                <div class="avatarBox">
+                                    <img :src="messageMap.get(msg.from).user.avatar" alt="404">
+                                </div>
+                            </div>
+                            <p class="messageContent">
+                                <span class="username"
+                                    v-if="msg.from!=account.id">{{messageMap.get(msg.from).user.name}}</span>
+                                <span class="messageTime badge bg-white bg-opacity-25">{{dateFormat(msg.time, 0)}}</span>
+                                <span class="username"
+                                    v-if="msg.from==account.id">{{messageMap.get(msg.from).user.name}}</span>
+                                <br>
+
+                                <span
+                                    :class="['position-relative', 'messageBubble', msg.from==account.id?'bg-primary':'bg-white', 'p-2', 'text-dark', msg.from==account.id?'bg-opacity-25':'bg-opacity-50']">
+                                    {{msg.msg}}
+                                    <span v-if="idx >= curmessageList.messages.length-curmessageList.unreadCount&&msg.from==account.id" class="unreadPoint position-absolute bottom-0 start-0"></span>
+                                </span>
+                            </p>
+
+                            <div class="avatar" v-if="msg.from==account.id">
+                                <div class="avatarBox">
+                                    <img :src="messageMap.get(msg.from).user.avatar" alt="404">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!--发送消息框-->
+                <div id="sentBox">
+                    <span>
+                        <span class="position-relative">
+                            <span v-show="showEmojiSpan" class="overflow-auto position-absolute bottom-0 start-0">
+                                <span class="emjio" v-for="emoji in emojis"
+                                    @click="emojiChoise(emoji)">{{emoji}}</span>
+                            </span>
+                            <i class="bi bi-emoji-smile-fill btn" @click="showEmojis"></i>
+                        </span>
+                        <span class="float-end">
+                            <i class="bi bi-clock-history btn" @click="showShearchBox"></i>
+                        </span>
+                        <span class="float-end">
+                            <i class="bi bi-person-fill btn" @click="showFriendList"></i>
+                        </span>
+                    </span>
+                    <textarea class="form-control" v-model="sentMsg"></textarea>
+                    <button class="btn btn-primary" @click="send_message(sentMsg, globalVar.messageTo)"
+                        :disabled="globalVar.messageTo == -1">发送</button>
+                </div>
+            </div>
+
+            <!--群组详情设置-->
+            <div class="col-md-2 sidebarRight" id="groupBox" v-show="showSidebarRight==1" v-if="true">
+                <div id="btnGroup">
+                    <i class="bi bi-person-plus-fill btn"></i>
+                    <i class="bi bi-pencil-square btn"></i>
+                    <i class="bi bi-gear-fill btn"></i>
+                </div>
+
+                <div id="announceBox">
+                    <div id="announceHeader">
+                        <span>群公告</span>
+                        <span><i class="bi bi-three-dots btn"></i></span>
+                    </div>
+
+                    <div id="announceBody" class="text-truncate">
+                        hello world! <br>
+                        hello world! <br>hello world! <br>hello world! <br>
+                        hello world! <br>hello world! <br>hello world! <br>
+                        hello world! <br>hello world! <br>hello world! <br>
+                    </div>
+
+                </div>
+
+                <div class="userList list-group">
+                    <div id="userSearchBox-group">
+                        <label for="userSearch"><i class="bi bi-search"></i></label>
+                        <input type="text" id="userSearch" placeholder="搜索">
+                    </div>
+
+                    <div class="list-group-item">
+                        <div class="avatar">
+                            <div class="avatarBox">
+                                <img src="/favicon.ico" alt="404">
+                            </div>
+                        </div>
+                        <span class="username">张小琅张小琅</span>
+                        <i class="bi bi-person-fill" style="color: darkorange;"></i>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- 好友列表 -->
+            <div class="col-md-2 sidebarRight" id="friendList" v-show="showSidebarRight==2">
+                <div class="list-group scrollarea">
+                    <div class="text-center" id="friendSearchBox-group">
+                        <label for="friendSearch"><i class="bi bi-search"></i></label>
+                        <input type="text" id="friendSearch" placeholder="搜索好友" v-model="filtFriendQuery" @keyup.enter="searchFriend(filtFriendQuery)">
+                    </div>
+                    <div v-for="user in filtFriends" class="list-group-item" :title="user.id">
+
+                        <div class="avatar">
+                            <div class="avatarBox">
+                                <img :src=user.avatar alt="404">
+                            </div>
+                        </div>
+
+                        <div style="line-height: 40px;">
+                            <strong>{{user.name}}<span class="badge" style="color: black"><i
+                                        class="bi bi-person-fill"></i></span></strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 查找历史消息 -->
+            <div class="col-md-2 sidebarRight" id="historySearch" v-show="showSidebarRight==3">
+                <div class="list-group scrollarea">
+                    <div class="text-center" id="friendSearchBox-group">
+                        <label for="friendSearch"><i class="bi bi-search"></i></label>
+                        <input type="text" id="friendSearch" placeholder="搜索历史" v-model="filtHistoryQuery" @keyup.enter="searchHistoryMessage(filtHistoryQuery)">
+                    </div>
+                    <div v-for="msg in filtHistorys" class="list-group-item" :title="msg.msg">
+
+                        <div class="avatar">
+                            <div class="avatarBox">
+                                <img :src="messageMap.get(msg.from).user.avatar" alt="404">
+                            </div>
+                        </div>
+
+                        <div style="line-height: 40px;">
+                            <span class="text-truncate">{{msg.msg}}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 用户搜索 侧边栏 -->
+    <div class="offcanvas offcanvas-start" tabindex="-1" id="userSearchOffcanvas"
+        aria-labelledby="userSearchOffcanvasLabel">
+        <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="userSearchOffcanvasLabel">搜索好友</h5>
+            <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"
+                aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body">
+            <!-- 搜索框 -->
+            <div class="input-group text-center">
+                <label for="search"><span class="input-group-text"><i class="bi bi-search"></i></span></label>
+                <input type="text" class="form-control iconfont" id="search" placeholder="搜索"
+                    v-model="searchUserQuery" @keyup.enter="searchUser(searchUserQuery)">
+            </div>
+            <br><br>
+
+
+            <!-- 列出用户 -->
+            <div class="list-group">
+
+                <div class="list-group-item" v-for="user in searchedUser">
+                    <span class="avatar">
+                        <div class="avatarBox">
+                            <img :src=user.avatar alt="404">
+                        </div>
+                    </span>
+                    <div>
+                        <div class="text-truncate">用户昵称: {{user.name}}</div>
+                        <div class="text-truncate">注册邮箱: {{user.email}}</div>
+                        <a @click="addFriend(user.id)" class="link-success">发送好友申请</a>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+    <!-- 系統消息提示 吐司弹出框 -->
+    <div id="toastmessageBox" class="toast-container position-absolute p-3 bottom-0 end-0">
+
+        <div class="toast show" role="alert" aria-live="assertive" aria-atomic="true"
+            v-for="req in addFriendRequest">
+            <div class="toast-header">
+                <strong class="me-auto"><i class="bi bi-fire"></i> 好友验证</strong>
+                <small class="text-muted">{{dateFormat(req.time,0)}}</small>
+                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body">
+                <span class="btn-sm">
+                    <span class="link-primary">{{req.uname}}</span> 请求添加好友
+                </span>
+
+                <span class="buttonGroup">
+                    <button @click="agreeFriend(req.token)" class="btn btn-outline-success btn-sm">同意</button>
+                    <button class="btn btn-outline-secondary btn-sm">忽视</button>
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 修改个人信息 模态弹窗 -->
+    <div class="modal fade" id="changePersonalInfo" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1"
+        aria-labelledby="staticBackdropLabel" aria-hidden="true">
+
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="staticBackdropLabel">修改个人信息</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+
+                        <!-- 头像上传 -->
+                        <div class="col-md-5">
+                            <div style="height: 300px; width: 300px; margin-bottom: 100px;">
+                                <input type="file" name="file" id="avatarUpdate" class="file-loading" />
+                            </div>
+                        </div>
+
+                        <!-- 其他个人信息 -->
+                        <div class="col-md-7">
+                            <div class="row" style="margin: 15px 0;">
+                                <!-- 昵称 -->
+                                <div class="col-md">
+                                    <label for="nickName" class="form-label">昵称</label>
+                                    <input type="text" class="form-control" id="nickName"
+                                        :placeholder="account.name" v-model="name">
+                                </div>
+                                <!-- 生日 时间选择器 -->
+                                <div class="col-md">
+                                    <label for="birthdayPicker" class="form-label">生日</label>
+                                    <div class="input-group date" id="birthdayPicker">
+                                        <input type="text" class="form-control" :placeholder="account.birthday">
+                                        <div class="input-group-text"><i class="bi bi-calendar-date"></i></div>
+
+                                        <div class="input-group-addon">
+                                            <span class="glyphicon glyphicon-th"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row" style="margin: 15px 0;">
+                                <!-- 邮箱 -->
+                                <div class="col-md-8">
+                                    <label for="emailInput" class="form-label">邮箱</label>
+                                    <input type="email" class="form-control-plaintext" id="emailInput" readonly
+                                        :value="account.email">
+                                </div>
+
+                                <!-- 性别 -->
+                                <div class="col-md-4">
+                                    <label for="sexChoice" class="form-label">性别</label>
+                                    <div id="sexChoice">
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="radio" name="inlineRadioOptions"
+                                                id="inlineRadio1" value="男"
+                                                :checked="account.sex=='男' ? 'checked' : ''" v-model="sex">
+                                            <label class="form-check-label" for="inlineRadio1">男</label>
+                                        </div>
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="radio" name="inlineRadioOptions"
+                                                id="inlineRadio2" value="女"
+                                                :checked="account.sex=='女' ? 'checked' : ''" v-model="sex">
+                                            <label class="form-check-label" for="inlineRadio2">女</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row" style="margin: 15px;">
+                                <label for="personalDescription" class="form-label">个性签名</label>
+                                <textarea class="form-control" id="personalDescription" rows="3"
+                                    :placeholder="account.description" v-model="description"></textarea>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" @click="savePersonalInfo">保存</button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        //主体框
+        new Vue({
+            el: '#main',
+            data: {
+                showSidebarRight: 0 ,
+                sentMsg: "",
+                users: [],
+                globalVar: globalVar,
+                account: null,
+                curmessageList: {unreadCount: 0, messages: []},
+                messageMap: messageMap,
+                backgroundColor: [
+                    "linear-gradient(45deg, #ff9a9e 0%, #fad0c4 99%, #fad0c4 100%)",
+                    "linear-gradient(to top, #e6b980 0%, #eacda3 100%)",
+                    "linear-gradient(-225deg, #5D9FFF 0%, #B8DCFF 48%, #6BBBFF 100%)",
+                    "linear-gradient(120deg, #84fab0 0%, #8fd3f4 100%)",
+                    "linear-gradient(to right, #fa709a 0%, #fee140 100%)",
+                    "linear-gradient(to right, #abbaab, #ffffff)",
+                    "linear-gradient(to left, #485563, #29323c)",
+                    "linear-gradient(to left, #6441a5, #2a0845)",
+                    "linear-gradient(to left, #ffb347, #ffcc33)",
+                    "linear-gradient(to left, #83a4d4, #b6fbff)",
+                    "linear-gradient(to left, #9d50bb, #6e48aa)",
+                    "linear-gradient(to left, #c9ffbf, #ffafbd)",
+                    "linear-gradient(to left, #ffefba, #ffffff)",
+                    "linear-gradient(to left, #d9a7c7, #fffcdc)",
+                ],
+                backgroundColorIdx: 1,
+                showEmojiSpan: false,
+                emojis: ["😀", "😄", "😁", "😆", "😅", "🤣", "😂", "🙂", "🙃", "😉", "😊", "😇", "🥰", "😍", "🤩", "😘", "😗",
+                    "😚", "😙", "🥲", "😋", "😛", "😜", "🤪", "😝", "🤑", "🤗", "🤭", "🤫", "🤔", "🤐", "🤨", "😐", "😑",
+                    "😶", "😏", "😒", "🙄", "😬", "🤥", "😌", "😔", "😪", "🤤", "😴", "😷", "🤒", "🤕", "🤢", "🤮", "🤧",
+                    "🥵", "🥶", "🥴", "😵", "🤯", "🤠", "🥳", "🥸", "😎", "🤓", "🧐", "😕", "😟", "🙁", "☹️", "😮", "😯",
+                    "😲", "😳", "🥺", "😦", "😧", "😨", "😰", "😥", "😢", "😭", "😱", "😖", "😣", "😞", "😓", "😩", "😫",
+                    "🥱", "😤", "😡", "😠", "🤬"],
+                showMsgOrFrd: 1,
+                filtFriendQuery: "",
+                filtFriends: [],
+                filtHistoryQuery: "",
+                filtHistorys: [],
+            },
+            created() {
+                this.account = JSON.parse(localStorage.getItem("account"));
+            },
+            mounted() {
+                that = this;
+
+                axios.get('/friends/list').then(function (response) {
+                    // 处理成功情况
+                    let res = response.data.data.users;
+                    that.users = res;
+
+                    res.forEach(element => {
+                        that.messageMap.set(element.id, { "messages": [], "unreadCount": 0, user: element });
+                        axios.get('/message/getHistory?to=' + element.id).then(function (response) { //获取历史信息
+                            // 处理成功情况
+                            that.messageMap.get(element.id).unreadCount = response.data.data.unreadCount;
+                            let res = response.data.data.messages
+                            if (res && res.length > 0) {
+                                that.messageMap.get(element.id).messages = res
+                            } else if (element.id != that.account.id) {
+                                that.messageMap.get(element.id).messages.push({ "from": element.id, "time": (new Date()).valueOf(), "msg": "我们已经是好友啦，一起来聊天吧！" });
+                            }
+                        }).catch(function (error) {
+                            // 处理错误情况
+                            that.messageMap.get(element.id).messages.push({ "from": element.id, "time": (new Date()).valueOf(), "msg": "我们已经是好友啦，一起来聊天吧！" });
+                            res = error.response.data;
+                            alert(res.msg);
+                        }).then(function () {
+                            // 总是会执行
+                        });
+                    });
+
+                    // //进入主界面后直接显示第一个角色消息对话框
+                    // if (res.length > 0) {
+                    //     that.globalVar.messageTo = res[0].id;
+                    //     that.curmessageList = messageMap.get(res[0].id);
+                    // }
+                }).catch(function (error) {
+                    // 处理错误情况
+                    console.log("error");
+                }).then(function () {
+                    // 总是会执行
+                });
+            },
+            methods: {
+                showGroupBox: function () {
+                    this.showSidebarRight = (this.showSidebarRight == 1 ? 0 : 1);
+                },
+                send_message: function (sentMsg, messageTo) {
+                    let data = {
+                        message: sentMsg,
+                        to: messageTo,
+                    };
+
+                    messageMap.get(messageTo).messages.push({ "from": this.account.id, "time": (new Date()).valueOf(), "msg": sentMsg });
+
+                    that = this;
+                    axios.post('/message/sent', data).then(function (response) {
+                        // 处理成功情况
+                        that.sentMsg = "";
+
+                        if(messageTo != that.account.id){
+                            messageMap.get(messageTo).unreadCount++;
+                        }
+                    }).catch(function (error) {
+                        // 处理错误情况
+                        res = error.response.data;
+                        alert(res.msg);
+                    }).then(function () {
+                        // 总是会执行
+                    });
+                    //滚动栏聚焦最底层 不生效
+                    this.scrollToBottom();
+                },
+                message_to: function (uid) {
+                    this.globalVar.messageTo = Number(uid);
+
+                    //接收消息
+                    if((messageMap.get(uid).messages.length > 0 && messageMap.get(uid).messages.slice(-1)[0].from != this.account.id) && messageMap.get(this.globalVar.messageTo).unreadCount > 0){
+                        messageMap.get(this.globalVar.messageTo).unreadCount = 0;
+                        
+                        let req = {
+                            "to": this.globalVar.messageTo,
+                            "eventId": eventId.readMessage,
+                            "message": null,
+                        }
+                        ws.send(JSON.stringify(req));
+                    }
+                    this.curmessageList = messageMap.get(this.globalVar.messageTo);
+
+                    //滚动栏聚焦到最底层 不生效
+                    this.scrollToBottom();
+                },
+                scrollToBottom: function () {
+                    this.$nextTick(() => {
+                        const div = document.getElementById('messageBox');
+                        div && (div.scrollTop = div.scrollHeight);
+                    })
+                },
+                dateFormat: function (timestamp, formatType) {
+                    let date = new Date(timestamp);
+
+                    Y = date.getFullYear() + '-';
+                    M = (date.getMonth() + 1 < 10 ? '0' + (date.getMonth() + 1) : date.getMonth() + 1) + '-';
+                    D = date.getDate() + ' ';
+                    h = (date.getHours() < 10 ? '0' + date.getHours() : date.getHours()) + ':';
+                    m = (date.getMinutes() < 10 ? '0' + date.getMinutes() : date.getMinutes()) + ':';
+                    s = (date.getSeconds() < 10 ? '0' + date.getSeconds() : date.getSeconds());
+                    if (formatType == 0) {
+                        if (new Date().setHours(0, 0, 0, 0) == new Date(timestamp).setHours(0, 0, 0, 0)) {
+                            return h + m + s;
+                        } else {
+                            return M + D + h + m + s;
+                        }
+                    } else {
+                        if (new Date().setHours(0, 0, 0, 0) == new Date(timestamp).setHours(0, 0, 0, 0)) {
+                            return (h + m).substring(0, 5);
+                        } else {
+                            return (M + D).substring(0, 5);
+                        }
+                    }
+                },
+                changeBackgroundColor: function () {
+                    $("body").css("background-image", this.backgroundColor[this.backgroundColorIdx]);
+                    len = this.backgroundColor.length;
+                    do {
+                        random = Math.floor(Math.random() * len);
+                    } while (random == this.backgroundColorIdx);
+
+                    $("#changeBackgroundColor").css("background-image", this.backgroundColor[random]);
+                    this.backgroundColorIdx = random;
+                },
+                emojiChoise: function (s) {
+                    this.sentMsg = this.sentMsg + s;
+                    this.showEmojiSpan = false;
+                },
+                showEmojis: function () {
+                    this.showEmojiSpan = !this.showEmojiSpan;
+                },
+                showMessageList: function () {
+                    this.showMsgOrFrd = 1;
+                },
+                showFriendList: function () {
+                    this.showSidebarRight = (this.showSidebarRight == 2 ? 0 : 2);
+                },
+                searchFriend: function(query){
+                    this.filtFriends = [];
+                    that = this;
+                    this.users.forEach(function (user) {
+                        if(user.name.search(query) >= 0){
+                            that.filtFriends.push(user);
+                        }
+                    });
+                },
+                showShearchBox: function(){
+                    this.showSidebarRight = (this.showSidebarRight == 3 ? 0 : 3);
+                },
+                searchHistoryMessage: function(query){
+                    this.filtHistorys = [];
+                    that = this;
+                    this.curmessageList.messages.forEach(function (message) {
+                        if(message.msg.search(query) >= 0){
+                            that.filtHistorys.push(message);
+                        }
+                    });
+                    console.log(this.filtHistorys);
+                }
+            }
+        })
+
+        //用户搜索 侧边栏
+        new Vue({
+            el: "#userSearchOffcanvas",
+            data: {
+                searchedUser: [],
+                searchUserQuery: "",
+            },
+            methods: {
+                searchUser: function (query) {
+                    that = this;
+                    axios.get('/user/search?query=' + query).then(function (response) {
+                        // 处理成功情况
+                        that.searchedUser = response.data.data.users;
+                    }).catch(function (error) {
+                        // 处理错误情况
+                        res = error.response.data;
+                        alert(res.msg);
+                    }).then(function () {
+                        // 总是会执行
+                    });
+                },
+                addFriend: function (uid) {
+                    axios.post('/friends/add?uid=' + uid).then(function (response) {
+                        // 处理成功情况
+                    }).catch(function (error) {
+                        // 处理错误情况
+                        res = error.response.data;
+                        alert(res.msg);
+                    }).then(function () {
+                        // 总是会执行
+                    });
+                }
+            }
+        })
+
+        //系统消息提示 吐司消息
+        new Vue({
+            el: "#toastmessageBox",
+            data: {
+                addFriendRequest: [],
+            },
+            mounted() {
+                this.addFriendRequest = addFriendRequest;
+            },
+            methods: {
+                agreeFriend: function (token) {
+                    that = this;
+                    axios.post('/friends/confirm?token=' + token).then(function (response) {
+                        // 处理成功情况
+                    }).catch(function (error) {
+                        // 处理错误情况
+                        res = error.response.data;
+                        alert(res.msg);
+                    }).then(function () {
+                        // 总是会执行
+                    });
+                },
+                dateFormat: function (timestamp, formatType) {
+                    let date = new Date(timestamp);
+
+                    Y = date.getFullYear() + '-';
+                    M = (date.getMonth() + 1 < 10 ? '0' + (date.getMonth() + 1) : date.getMonth() + 1) + '-';
+                    D = date.getDate() + ' ';
+                    h = (date.getHours() < 10 ? '0' + date.getHours() : date.getHours()) + ':';
+                    m = (date.getMinutes() < 10 ? '0' + date.getMinutes() : date.getMinutes()) + ':';
+                    s = (date.getSeconds() < 10 ? '0' + date.getSeconds() : date.getMinutes());
+                    if (formatType == 0) {
+                        if (new Date().setHours(0, 0, 0, 0) == new Date(timestamp).setHours(0, 0, 0, 0)) {
+                            return h + m + s;
+                        } else {
+                            return M + D + h + m + s;
+                        }
+                    } else {
+                        if (new Date().setHours(0, 0, 0, 0) == new Date(timestamp).setHours(0, 0, 0, 0)) {
+                            return (h + m).substring(0, 5);
+                        } else {
+                            return (M + D).substring(0, 5);
+                        }
+                    }
+                },
+            }
+        })
+
+        //修改用户信息
+        let avatarUpdate = null; //用户上传的头像文件 二进制形式在上传时应当考虑更改为base64编码
+        new Vue({
+            el: "#changePersonalInfo",
+            data: {
+                account: null,
+                name: "",
+                birthday: "",
+                sex: "",
+                description: ""
+            },
+            created() {
+                this.account = JSON.parse(localStorage.getItem("account"));
+            },
+            mounted() {
+                this.name = this.account.name;
+                this.birthday = this.account.birthday;
+                this.sex = this.account.sex;
+                this.description = this.account.description;
+            },
+            methods: {
+                savePersonalInfo: function () {
+                    that = this;
+                    let data = {
+                        'name': this.name,
+                        'birthday': $('#birthdayPicker').find("input").val(),
+                        'sex': this.sex,
+                        'description': this.description,
+                        'avatar': ''
+                    }
+                    if (avatarUpdate != null) {
+                        let reader = new FileReader();
+                        reader.readAsDataURL(avatarUpdate);//参数为上传的文件对象 传值进去就会触发以下onload方法
+                        reader.onload = function (e) {
+                            // e.target.result为转换成的base64编码
+                            data.avatar = e.target.result; //当src被赋值 则触发以下方法
+
+                            axios.put('/account/updateUserInfo', data).then(function (response) {
+                                // 处理成功情况
+                                that.account = response.data.data.account;
+                                console.log(that.account);
+                                localStorage.setItem("account", JSON.stringify(response.data.data.account));
+                                location.reload();
+                            }).catch(function (error) {
+                                // 处理错误情况
+                                res = error.response.data;
+                                alert(res.msg);
+                            }).then(function () {
+                                // 总是会执行
+                            });
+                        }
+                    } else {
+                        axios.put('/account/updateUserInfo', data).then(function (response) {
+                            // 处理成功情况
+                            that.account = response.data.data.account;
+                            console.log(that.account);
+                            localStorage.setItem("account", JSON.stringify(response.data.data.account));
+                            location.reload();
+                        }).catch(function (error) {
+                            // 处理错误情况
+                            res = error.response.data;
+                            alert(res.msg);
+                        }).then(function () {
+                            // 总是会执行
+                        });
+                    }
+
+                    console.log(data);
+                    console.log(this.account);
+                }
+            }
+        })
+
+        $('#avatarUpdate').fileinput({
+            language: 'zh',     //设置语言
+            dropZoneEnabled: true,      //是否显示拖拽区域
+            showUpload: false,
+            showClose: false,
+            showUploadedThumbs: false,
+            dropZoneTitle: "可将图片拖放至此",    //拖拽区域显示文字
+            allowedFileExtensions: ['jpg', 'png', 'gif', 'jpeg'],   //指定上传文件类型
+            maxFileSize: 2048,   //上传文件最大值，单位kb
+            uploadAsync: true,  //异步上传
+            maxFileCount: 1    //上传文件最大个数。
+        }).on("filebatchselected", function (event, files) { //异步上传成功后回调
+            avatarUpdate = files[0];
+        }).on("filecleared", function () {
+            avatarUpdate = null;
+        });
+
+        var $date = $("#birthdayPicker");
+        $(document).ready(function () {
+            $date.datepicker({
+                language: "zh-CN", //中文
+                autoclose: true, //自动关闭
+                todayHighlight: true, //当天高亮
+                format: "yyyy-mm-dd" //日期格式
+            });
+            $date.datepicker('setDate', new Date());
+            $date.datepicker('setStartDate', new Date(1949, 10, 1));
+            $date.datepicker('setEndDate', new Date());
+            $date.datepicker('clearDates', new Date());
+        });
+    </script>
+</body>
+
+</html>
